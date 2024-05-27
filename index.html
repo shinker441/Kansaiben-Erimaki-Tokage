@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Google Maps Street View</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+
+        #street-view {
+            height: 100%;
+            width: 100%;
+        }
+
+        #street-view .gm-style-cc {
+            display: none;
+        }
+
+        #street-view .gmnoprint {
+            display: none;
+        }
+
+        #map {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            height: 200px;
+            width: 300px;
+            z-index: 10;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+    
+        #timer {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        #image-display {
+            position: absolute;
+            top: 10px; /* 左上に表示 */
+            left: 10px;
+            height: 200px;
+            width: 300px;
+            z-index: 10;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCU9sWHwApidUu0Oz9lccMPAvIkBEzf9UE" async defer></script>
+    <script>
+        let map;
+        let panorama;
+        let marker;
+        let timerInterval;
+
+        function initMap() {
+            // 初期地点の設定
+            const initialLocation = { lat: 36.110521, lng: 140.101199 };
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: initialLocation,
+                zoom: 14,
+                streetViewControl: false
+            });
+
+            panorama = new google.maps.StreetViewPanorama(
+                document.getElementById('street-view'), {
+                    position: initialLocation,
+                    pov: { heading: 34, pitch: 10 },
+                    zoom: 1
+                }
+            );
+
+            map.setStreetView(panorama);
+
+            const allowedBounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(36.0621922,140.0824135),
+                new google.maps.LatLng(36.1311858,140.1228288)
+            );
+
+            google.maps.event.addListener(map, 'dragend', function() {
+                if (!allowedBounds.contains(map.getCenter())) {
+                    map.setCenter(initialLocation);
+                }
+            });
+
+            google.maps.event.addListener(map, 'zoom_changed', function() {
+                if (!allowedBounds.contains(map.getCenter())) {
+                    map.setCenter(initialLocation);
+                }
+            });
+
+            map.addListener('click', (event) => {
+                if (allowedBounds.contains(event.latLng)) {
+                    placeMarker(event.latLng);
+                    panorama.setPosition(event.latLng);
+                }
+            });
+
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+
+            fetchImageData();
+        }
+
+        function placeMarker(location) {
+            if (marker) {
+                marker.setPosition(location);
+            } else {
+                marker = new google.maps.Marker({
+                    position: location,
+                    map: map
+                });
+            }
+        }
+
+        window.onload = initMap;
+
+        const countdownMinutes = 2;
+        const startTime = new Date();
+        startTime.setMinutes(startTime.getMinutes() + countdownMinutes);
+
+        function updateTimer() {
+          const currentTime = new Date();
+          const difference = startTime - currentTime;
+
+          if (difference <= 0) {
+            clearInterval(timerInterval);
+            document.getElementById('timer').innerHTML = '0:00';
+            window.location.href='test2.html';
+            return;
+          }
+
+          const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+          document.getElementById('timer').innerHTML = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        function fetchImageData() {
+            fetch('http://localhost:8000/fetch_image_test.php')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);  // デバッグ用にデータをログに表示
+                    if (data.image_url) {
+                        const imageDisplay = document.getElementById('image-display');
+                        imageDisplay.style.backgroundImage = `url(${data.image_url})`;
+
+                        const imageLocation = { lat: data.lat, lng: data.lng };
+                        // 画像の位置にマーカーを置くだけで、ストリートビューは初期位置のまま
+                        placeMarker(imageLocation);
+                    } else {
+                        console.error("Error: No image URL found in the response");
+                    }
+                })
+                .catch(error => console.error('Error fetching image data:', error));
+        }
+    </script>
+</head>
+<body>
+    <div id="container">
+        <div id="street-view"></div>
+        <div id="map"></div>
+        <div id="timer">2:00</div>
+        <div id="image-display"></div>
+    </div>
+</body>
+</html>
