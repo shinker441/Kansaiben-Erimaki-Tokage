@@ -1,14 +1,23 @@
 import sqlite3
 
-# データベースに接続
-conn = sqlite3.connect('my_database.db')
+# データベース接続オブジェクトを初期化
+conn = None
 
-# カーソルオブジェクトを作成
-cursor = conn.cursor()
+try:
+    # データベースに接続
+    conn = sqlite3.connect(
+        'C:\\Users\\kansh\\Documents\\TKU-春\\知識情報システム演習A\\work_file\\my_database.db')
+    cursor = conn.cursor()
 
-# 特定の行を削除
-cursor.execute('DELETE FROM locations WHERE id = 1')
+    # 特定の行を削除
+    cursor.execute('DELETE FROM locations WHERE id = 8')
 
-# 変更をコミットして接続を閉じる
-conn.commit()
-conn.close()
+    # 変更をコミット
+    conn.commit()
+
+except sqlite3.Error as e:
+    print(f"An error occurred: {e}")
+
+finally:
+    if conn is not None:
+        conn.close()

@@ -1,13 +1,164 @@
 <!doctype html>
 <html>
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale-1.0">
-		<title>終了画面</title>
-	</head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>終了画面</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        p {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        button {
+            background-color: #6a0dad;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #5a0cad;
+        }
+        #congratulations {
+            color: #ff4500;
+            font-size: 20px;
+            margin-top: 10px;
+        }
+        #map {
+            width: 80%;
+            height: 400px;
+            margin-top: 20px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        #legend {
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+        }
+        .red {
+            background-color: rgba(255, 0, 0, 0.6);
+        }
+        .blue {
+            background-color: rgba(0, 0, 255, 0.6);
+        }    
+	</style>
+    <script>
+        function initMap() {
+            const markerLat = localStorage.getItem('markerLat');
+            const markerLng = localStorage.getItem('markerLng');
+            const imageLat = localStorage.getItem('imageLat');
+            const imageLng = localStorage.getItem('imageLng');
 
-	<body>
-		<h1>結果</h1>
-		<button onclick="location.href='test.html'">ホーム画面に戻る</button>
-	</body>
+            if (markerLat && markerLng && imageLat && imageLng) {
+                const distance = haversine(parseFloat(markerLat), parseFloat(markerLng), parseFloat(imageLat), parseFloat(imageLng)).toFixed(2);
+                document.getElementById('distance').textContent = distance;
+
+                const score = calculateScore(distance);
+                document.getElementById('score').textContent = score;
+
+                if (score === 100) {
+                    document.getElementById('congratulations').style.display = 'block';
+                }
+
+                // マップを表示
+                const mapOptions = {
+                    zoom: 13,
+                    center: { lat: parseFloat(imageLat), lng: parseFloat(imageLng) }
+                };
+                const map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+                // 画像の位置にマーカーを置く
+                new google.maps.Marker({
+                    position: { lat: parseFloat(imageLat), lng: parseFloat(imageLng) },
+                    map: map,
+                    title: "答えの位置",
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                });
+
+                // マーカーの位置にマーカーを置く
+                new google.maps.Marker({
+                    position: { lat: parseFloat(markerLat), lng: parseFloat(markerLng) },
+                    map: map,
+                    title: "あなたの回答の位置",
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                });
+
+            } else {
+                document.getElementById('distance').textContent = 'データがありません';
+                document.getElementById('score').textContent = 'データがありません';
+            }
+        }
+
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371; // 地球の半径（キロメートル）
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distanceInKm = R * c;
+            return distanceInKm * 1000; // キロメートルからメートルに変換
+        }
+
+        function calculateScore(distance) {
+            const maxDistance = 5000; // 2キロメートルを最大距離とする
+            const maxScore = 100; // 100点満点
+            if (distance <= 5) {
+                return maxScore;
+            } else {
+				const score = maxScore * (1 - Math.log(1 + distance / maxDistance * 9) / Math.log(10));
+                return score < 0 ? 0 : Math.round(score);
+            }
+        }    
+	</script>
+</head>
+
+<body>
+    <h1>結果</h1>
+    <p>距離: <span id="distance"></span> m</p>
+    <p>得点: <span id="score"></span></p>
+    <p id="congratulations" style="display:none;">満点！おめでとう！</p>
+    <div id="map"></div>
+    <div id="legend">
+        <div class="legend-item">
+            <div class="legend-color red"></div>
+            <span>答え</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color blue"></div>
+            <span>あなたの回答</span>
+        </div>
+    </div>
+    <button onclick="location.href='home.html'">ホーム画面に戻る</button>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCU9sWHwApidUu0Oz9lccMPAvIkBEzf9UE&callback=initMap" async defer></script>
+</body>
 </html>
